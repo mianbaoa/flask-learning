@@ -1,0 +1,69 @@
+<!--这是一个有导航栏的基模板！！-->
+{% extends "bootstrap/base.html" %}
+{% block title %}Flasky{% endblock %}
+
+
+{% block head %}
+{{ super() }}  <!--保留bootstrap基模块中 head块原来的的属性，添加新的属性(主题图标)-->
+<link rel="shortcut icon" href = "{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+<link rel="icon" href = "{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+{% endblock %}
+
+
+{% block scripts %}
+{{ super() }}
+{{ moment.include_moment() }}<!--引入moment.js库
+{% endblock %}
+
+
+{% block navbar %}<!--下面是导航栏的设置，还有一些东西不懂-->
+<div class="navbar navbar-inverse" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle"
+                    data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Flasky</a><!--这里的<a></a>就表示是一个链接-->
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a class="navbar-brand" href="/">首页</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if current_user.is_authenticated %}
+                <!--current_user由FLASK-LOGIN定义，且在视图函数与模板中自动可用,如果用户登录，返回Turn。-->
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">账户<b class="caret"></b> </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('auth.newpassword') }}">修改密码</a> </li>
+                        <li><a href="{{ url_for('auth.logout') }}">注销</a> </li>
+                    </ul>
+                </li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">登录</a> </li>
+                    <li><a href="{{ url_for('auth.register') }}">注册</a> </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+{% block content %}
+<div class="container">
+    {% for message in get_flashed_messages() %}<!--把get_flashed_message函数开放给模板，用来获取并渲染消息，
+    视图函数里的flash内容得以显示出来-->
+    <div class="alert alert-warning">
+        <button type="button" class="close" data-dismiss="alert">&times;</button><!--设置警告样式-->
+        {{ message }}
+    </div>
+    {% endfor %}<!--内容结束！使用Bootstrap提供的警报css样式警告消息-->
+    {% block page_content %}{% endblock %}<!--设置一个空模块，使子模板继承之后可以使用他来输出自己想要的内容-->
+</div>
+{% endblock %}

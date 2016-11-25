@@ -1,0 +1,9 @@
+{% extends "base.html" %}<!--继承基模板的所有属性-->
+{% block titel %}Flasky - Not find{% endblock %}<!--重新定义自己的titel名称块-->
+{% block page_content %}<!--填补基模块里的page_content块 在content里面-->
+<div class="page-header"><!--采用bootstrap里的css样式-->
+    <h1>Not Found</h1><!--大小为h1的字-->
+
+</div>
+{% endblock %}<!--填补结束-->
+<!--404.html;500.html;user.html;index.html;都是同上的-->

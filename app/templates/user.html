@@ -1,0 +1,11 @@
+<!--别他妈抄错符号啊！！-->
+<!--定义了三个块，分别为titel,navbar(页面中的导航条),content（主体内容）,都是基模块提供的，可在衍生模块中重新定义-->
+{% extends "base.html" %}<!--从Bootstrap中导入bootstrap/base.html 实现模块继承，可以使用Bootstrap中的所有样式跟JS-->
+{% block titel %}Flasky{% endblock %}
+{% block page_content %}
+    <div class="page-header">
+    <h1>Hello,{{ name }}!!!</h1>
+    </div>
+    <p>The local data and time is{{ moment(current_time).format('LLL') }}</p>
+    <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
+{% endblock %}
