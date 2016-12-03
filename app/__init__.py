@@ -4,12 +4,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_moment import Moment
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager
+from flask_pagedown import PageDown
 from config import config#top-level package可以直接引用，不需要加上相对路径‘..’
 
 bootstrap=Bootstrap()
 mail=Mail()#这里是在其他函数文件里面要用到这些模块
 db=SQLAlchemy()
 moment=Moment()
+pagedown=PageDown()
 login_manager=LoginManager()
 login_manager.session_protection='strong'#加强会话保护，设为strong时，flask-login记下ip和浏览器代理信息，
 # 如果发生异动就登出用户
@@ -20,6 +22,7 @@ def create_app(config_name):#程序工厂函数，连接蓝本，创建实例，
     app.config.from_object(config[config_name])#这里的from_object是Flask提供的，可以直接把配置文件导入程序
     mail.init_app(app)
     db.init_app(app)
+    pagedown.init_app(app)
     moment.init_app(app)
     bootstrap.init_app(app)
     login_manager.init_app(app)

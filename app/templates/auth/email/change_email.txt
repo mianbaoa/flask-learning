@@ -1,0 +1,4 @@
+亲爱的,{{ user.username }}!!
+这个是你的新的用于接受信件的邮箱地址，请点击下面链接来验证这个邮箱：
+{{ url_for('auth.change_email',token=token,_external=True) }}
+{{ url_for('auth.change_email',token=token,_external=True) }}

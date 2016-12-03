@@ -7,6 +7,8 @@ class Config:
     FLASKY_MAIL_SUBJECT_PREFIX='[Flasky]'
     FLASKY_MAIL_SENDER='18435151481@163.com'
     FLASKY_ADMIN=os.environ.get('FLASKY_ADMIN')
+    FLASKY_POSTS_PER_PAGE=5
+    FLASKY_FOLLOWERS_PER_PAGE=5
 
     @staticmethod#主要起作用的还是修饰器里的函数，
     def init_app(app):#配置类可以定义init_app()类方法，其参数是程序实例。在这个方法中，可以执行对当前环境的初始化

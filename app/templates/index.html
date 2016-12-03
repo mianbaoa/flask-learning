@@ -1,5 +1,11 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "_fenye.html" as fenye %}
 {% block titel %}Flasky{% endblock %}
+
+
+
+
 {% block page_content %}
 <div class="page-header">
     <h1>Hello,{% if current_user.is_authenticated %}{{ current_user.username }}{% else %}探险家{% endif %}!!!</h1><!--if成立的话就取if跟else中间的内容，不成立的话就取else后面的值-->
@@ -7,4 +13,21 @@
     <p>The local data and time is{{ moment(current_time).format('LLL') }}</p><!--LLL 根据客户端电脑中的时区和区域设置渲染时期和时间，
     这里输出的格式是  November 17, 2016 6:27 PM,L到LLL分别对应不同的复杂度-->
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p><!--指定refresh参数后会随时间的推移而更新,这里的格式是an hour ago-->
+<div>
+{% if current_user.can(Permission.WRITE_ARTICLES) %}
+{{ wtf.quick_form(form) }}
+{% endif %}
+</div>
+<hr style="height:3px;border:none;border-top:3px double red;" />
+{% include '_posts.html' %}
+    {% if pagination %}
+    <div class="pagination">
+    {{ fenye.pagination_widget(pagination, 'main.index') }}
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
 {% endblock %}

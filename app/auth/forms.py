@@ -48,6 +48,15 @@ class ChongsheForm(Form):
     submit=SubmitField('确认重设')
 
     def validators_email(self,firld):
-        if User.query.filter_by(email=firld.data).first():
+        if User.query.filter_by(email=firld.data).first() is None:
             raise ValidationError('找不到用户名邮箱')
 
+
+class NewemailForm(Form):
+    email=StringField('新的邮箱地址',validators=[Required(),Email(),Length(1,64)])
+    password=PasswordField('用户密码',validators=[Required()])
+    submit=SubmitField('发送邮箱验证')
+
+    def valitators_newemail(self,firld):
+        if User.query.filter_by(email=firld.data).first():
+            raise ValidationError('用户邮箱已存在')

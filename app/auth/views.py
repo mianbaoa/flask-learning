@@ -1,7 +1,7 @@
 from flask import render_template,redirect,request,url_for,flash
 from . import auth
 from .. import db
-from .forms import LoginForm,RegistrationForm,PasswordForm,FindForm,ChongsheForm
+from .forms import LoginForm,RegistrationForm,PasswordForm,FindForm,ChongsheForm,NewemailForm
 from ..models import User
 from flask_login import login_user,logout_user,login_required
 from ..emails import send_email
@@ -48,11 +48,14 @@ def confirm(token):
 @auth.before_app_request#回调修饰器，可以在必要时拦截请求，拦截了登录请求，重定向到未认证的页面
 # 这个修饰器是用来过滤未认证的用户的，当请求不是auth蓝本里的请求，而且用户登录了但是未认证
 def before_request():
-    if current_user.is_authenticated \
-        and not current_user.confirmed \
-        and request.endpoint[:5] != 'auth.'\
-        and request.endpoint != 'static':
-        return redirect(url_for('auth.unconfirmed'))
+    if current_user.is_authenticated:
+        current_user.ping()
+        if not current_user.confirmed \
+            and request.endpoint[:5] != 'auth.'\
+            and request.endpoint != 'static':
+            return redirect(url_for('auth.unconfirmed'))
+
+
 @auth.route('/newpassword',methods=['GET','POST'])
 @login_required
 def newpassword():
@@ -67,6 +70,34 @@ def newpassword():
             flash('你输入的密码不正确')
 
     return render_template('auth/newpassword.html',form=form)
+
+
+
+@auth.route('/xiugai_email',methods=['GET','POST'])
+@login_required
+def xiugai_email():
+    form=NewemailForm()
+    if form.validate_on_submit():
+        if current_user.verify_password(form.password.data):
+            new_email=form.email.data
+            token=current_user.generate_newemail_token(new_email)
+            send_email(new_email,'新邮箱验证','auth/email/change_email',user=current_user,
+                       token=token,)
+            flash('邮箱已发送,请验证你的新邮箱')
+            return redirect(url_for('main.index'))
+        flash('用户密码错误!')
+    return render_template('auth/newemail.html',form=form)
+
+
+@auth.route('/change-email/<token>')
+@login_required
+def change_email(token):
+    #具体修改邮箱的方式是在User模块中进行,token里面解码出的是个字典，可以包含很多信息
+    if current_user.change_email(token):
+        flash('邮箱修改成功！')
+    else:
+        flash('邮箱修改失败！')
+    return redirect(url_for('main.index'))
 
 
 @auth.route('/unconfirmed')#未认证用户的页面
@@ -100,6 +131,8 @@ def zhaohui():
 
 @auth.route('/chongshe/<token>',methods=['GET','POST'])
 def chongshe(token):
+    if not current_user.is_anonymous:
+        return redirect(url_for('main.index'))
     form=ChongsheForm()
     if form.validate_on_submit():
         user=User.query.filter_by(email=form.email.data).first()

@@ -8,3 +8,7 @@ def error_notfound(e):
 @main.errorhandler(500)
 def error_Internet(e):
     return render_template('500.html'),500
+
+@main.errorhandler(403)
+def error_ban(e):
+    return render_template('403.html'),403

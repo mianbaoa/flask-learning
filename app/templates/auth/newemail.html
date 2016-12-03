@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
-{% block titel %}Flasky-register{% endblock %}
+{% block titel %}Flasky - change_email{% endblock %}
 {% block page_content %}
-<h1>用户注册</h1>
+<h1>修改邮箱地址</h1>
+<p>注意:修改之后用户的帐号就是你所修改的邮箱</p>
 <div class="col-md-4">
     {{ wtf.quick_form(form) }}
 </div>

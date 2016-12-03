@@ -7,6 +7,7 @@
 {{ super() }}  <!--保留bootstrap基模块中 head块原来的的属性，添加新的属性(主题图标)-->
 <link rel="shortcut icon" href = "{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 <link rel="icon" href = "{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 {% endblock %}
 
 
@@ -32,14 +33,20 @@
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li><a class="navbar-brand" href="/">首页</a></li>
+                {% if current_user.is_authenticated %}
+                <li><a class="navbar-brand" href="{{ url_for('main.user',username=current_user.username) }}">个人资料</a> </li>
+                {% endif %}
             </ul>
+
             <ul class="nav navbar-nav navbar-right">
                 {% if current_user.is_authenticated %}
                 <!--current_user由FLASK-LOGIN定义，且在视图函数与模板中自动可用,如果用户登录，返回Turn。-->
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">账户<b class="caret"></b> </a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        <img src="{{ current_user.gravatar(size=25) }}">账户<b class="caret"></b> </a>
                     <ul class="dropdown-menu">
                         <li><a href="{{ url_for('auth.newpassword') }}">修改密码</a> </li>
+                        <li><a href="{{ url_for('auth.xiugai_email') }}">修改邮箱地址</a> </li>
                         <li><a href="{{ url_for('auth.logout') }}">注销</a> </li>
                     </ul>
                 </li>
