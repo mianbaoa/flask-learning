@@ -76,6 +76,7 @@ class Post(db.Model):
     body_html=db.Column(db.Text)
     timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
     author_id=db.Column(db.Integer,db.ForeignKey('users.id'))
+    comments=db.relationship('Comment',backref='post',lazy='dynamic')
 
     @staticmethod#这个修饰器非常有用，可以在命令行单独启用他，让他生成数据库的很多虚拟用户
     def generate_fake(count=100):#创建虚拟的博文。。
@@ -109,6 +110,26 @@ class Follow(db.Model):
     follower_id=db.Column(db.Integer,db.ForeignKey('users.id'),primary_key=True)
     timestamp=db.Column(db.DateTime,default=datetime.utcnow)
 
+class Comment(db.Model):
+    __tablename__='comments'
+    id=db.Column(db.Integer,primary_key=True)
+    body=db.Column(db.Text)
+    body_html=db.Column(db.Text)
+    timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
+    disabled=db.Column(db.Boolean)#默认为空，即为False,该评论没有被禁用
+    author_id=db.Column(db.Integer,db.ForeignKey('users.id'))
+    post_id=db.Column(db.Integer,db.ForeignKey('posts.id'))
+
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code',
+                        'em', 'i','strong']
+        target.body_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'), tags=allowed_tags,
+                                                       strip=True))
+
+
+db.event.listen(Comment.body, 'set', Comment.on_changed_body)
+
 class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默认实现,为了使用Flask-Login，必须实现这四个方法
     __tablename__='users'
     id=db.Column(db.Integer,primary_key=True)#Integer默认32位
@@ -133,6 +154,8 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
     member_since=db.Column(db.DateTime(),default=datetime.utcnow)#datetime.utcnow这里没有()，作为默认值函数
     last_seen=db.Column(db.DateTime(),default=datetime.utcnow)
 
+    comments=db.relationship('Comment',backref='author',lazy='dynamic')#lazy参数设置为dynamic，返回的查询对象
+
 #<<<-----创建四个关于关注者与被关注者的方法跟一个索引属性：self所关注人的博文----->>>
     def follow(self,user):
         if not self.is_following(user):
@@ -152,9 +175,20 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
 
     @property#把followed_posts方法变为属性，在models中加入方法不用更新数据库，添加一行新字段时需要更新数据库
     def followed_posts(self):
-        return Post.query.join(followed_id=Post.author_id).filter(Follow.follower_id==self.id)
-        #这里不难理解，先在Follow表中过滤出self用户(self.id)对应的关注了的人的id，然后再根据这些id在Post找作者为被关注者的博文
+        return Post.query.join(Follow,Follow.followed_id==Post.author_id).filter(Follow.follower_id==self.id)
+        #这里不难理解，先在Follow表中过滤出self用户(self.id)对应的关注了的人的id，返回到Post然后再根据这些id在Post找作者为被关注者的博文
 #<<<-----创建随机用户----->>>
+
+
+    @staticmethod#添加一个在命令行执行的方法,这个方法可以使数据库的每个用户都关注自己,从而可以在首页关注者里看到自己的博文
+    def add_followed_self():
+        for user in User.query.all():
+            if not user.is_following(user):
+                user.follow(user)
+                db.session.add(user)
+                db.session.commit()
+
+
     @staticmethod
     def generate_fake(count=100):#创建100个随机的用户
         from sqlalchemy.exc import IntegrityError
@@ -185,7 +219,7 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
             url='http://www.gravatar.com/avatar'
         hash=self.gravatar_hash or hashlib.md5(self.email.encode('utf-8')).hexdigest()#先执行or前面的，若self没有gravatar_hash散列值再生成散列值
         return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(url=url,hash=hash,size=size,default=default,
-                                                                     rating=rating)
+                                                                     rating=rating)#d参数为头像生成器，有很多选择 参考p110
         #这里返回一个完整的url地址
 
 
@@ -193,15 +227,16 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
         self.last_seen=datetime.utcnow()
         db.session.add(self)
 
-    def __init__(self,**kwargs):#这个函数表示创建基类对象，应该就是表示注册完了之后吧
+    def __init__(self,**kwargs):#这个函数表示创建基类对象，应该就是表示注册完了之后赋予用户的属性
         super(User,self).__init__(**kwargs)
         if self.role is None:
             if self.email == current_app.config['FLASKY_ADMIN']:
-                self.role = Role.query.filter_by(permissions=0xff).first()
+                self.role = Role.query.filter_by(permissions=0xff).first()#管理员注册之后自动赋予管理员角色
             if self.role is None:
-                self.role = Role.query.filter_by(default=True).first()
+                self.role = Role.query.filter_by(default=True).first()#用户注册完之后自动赋予用户User角色
         if self.email is not None and self.gravatar_hash is None:
-            self.gravatar_hash=hashlib.md5(self.email.encode('utf-8')).hexdigest()
+            self.gravatar_hash=hashlib.md5(self.email.encode('utf-8')).hexdigest()#用户注册完之后自动赋予用户头像散列值
+        self.follow(self)#用户创建时就是在数据库里关注自己的
 
     #<<<-----定义判断是否为管理员的函数----->>>
     def can(self,permissions):

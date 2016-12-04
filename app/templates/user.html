@@ -47,9 +47,9 @@
             {% endif %}
         {% endif %}
         <a href="{{ url_for('main.followers',username=user.username) }}">关注他的人:
-            <span class="badge">{{ user.followers.count() }}</span> </a>
+            <span class="badge">{{ user.followers.count() - 1 }}</span> </a>
         <a href="{{ url_for('main.followed',username=user.username) }}">
-            他关注的人:<span class="badge">{{ user.followed.count() }}</span> </a>
+            他关注的人:<span class="badge">{{ user.followed.count() - 1 }}</span> </a><!--删掉自己关注自己-->
         {% if current_user.is_authenticated and user!=current_user and user.is_following(current_user) %}
         | <span class="label label-default">他关注了你</span>
         {% endif %}

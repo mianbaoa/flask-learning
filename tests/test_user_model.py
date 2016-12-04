@@ -1,7 +1,8 @@
 import unittest
-from app.models import User,Role,Permission,AnonymousUser
+from app.models import User,Role,Permission,AnonymousUser,Follow
 from app import db,create_app
 import time
+from datetime import datetime
 
 class UserModelTestCase(unittest.TestCase):
     #前面这个两个函数是必不可少的，使测试能在测试数据库中运行，每当执行一个测试函数，都会已setUp开始，已tearDown结束！
@@ -10,6 +11,8 @@ class UserModelTestCase(unittest.TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
+        Role.insert_roles()
+
 
     def tearDown(self):
         db.session.remove()
@@ -121,6 +124,64 @@ class UserModelTestCase(unittest.TestCase):
         u=AnonymousUser()
         self.assertFalse(u.can(Permission.WRITE_ARTICLES))
         self.assertFalse(u.can(Permission.FOLLOW))
+
+    def test_timestamps(self):
+        u = User(password='cat')
+        db.session.add(u)
+        db.session.commit()
+        self.assertTrue(
+            (datetime.utcnow() - u.member_since).total_seconds() < 3)
+        self.assertTrue(
+            (datetime.utcnow() - u.last_seen).total_seconds() < 3)
+
+    def test_ping(self):
+        u=User(password='cat')
+        db.session.add(u)
+        db.session.commit()
+        last_seen_before=u.last_seen
+        time.sleep(2)
+        u.ping()
+        self.assertTrue(u.last_seen > last_seen_before)
+
+    def test_follow(self):
+        u1=User(email='252353453@163.com',password='cat')
+        u2=User(email='358648363@163.com',password='dog')
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.commit()
+        self.assertTrue(u1.is_following(u1))
+        self.assertTrue(u2.is_following(u2))
+        timestamp_before = datetime.utcnow()
+        u1.follow(u2)
+        db.session.add(u1)
+        db.session.commit()
+        timestamp_after = datetime.utcnow()
+        self.assertTrue(u1.is_following(u2))
+        self.assertFalse(u1.is_followed_by(u2))
+        self.assertTrue(u2.is_followed_by(u1))
+        self.assertTrue(u1.followed.count() == 2)
+        self.assertTrue(u2.followers.count() == 2)
+        f = u1.followed.all()[-1]
+        self.assertTrue(f.followed == u2)
+        self.assertTrue(timestamp_before <= f.timestamp <= timestamp_after)
+        f = u2.followers.all()[-1]
+        self.assertTrue(f.follower == u2)#这里的逻辑有点混乱
+        u1.unfollow(u2)
+        db.session.add(u1)
+        db.session.commit()
+        self.assertTrue(u1.followed.count() == 1)
+        self.assertTrue(u2.followers.count() == 1)
+        self.assertTrue(Follow.query.count() == 2)
+        u2.follow(u1)
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.commit()
+        db.session.delete(u2)#测试删除一个用户，他的关注者和他的被关注者这层关系都会被删除
+        db.session.commit()
+        self.assertTrue(Follow.query.count() == 1)
+
+
+
 
 
 

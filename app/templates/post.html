@@ -1,5 +1,22 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "_fenye.html" as fenye %}
 {% block titel %}Flasky - post{% endblock %}
 {% block page_content %}<!--这里连个符号都写错了我的天老爷-->
 {% include '_posts.html' %}
+    <h4 id="comments">评论</h4>
+    {{ wtf.quick_form(form) }}
+    {% if current_user.can(Permission.MODERATE_COMMENTS) %}
+    {% set moderate=True %}
+    {% endif %}
+    {% include "_comments.html" %}
+    {% if pagination %}
+    <div class="pagination"></div>
+    {{ fenye.pagination_widget(pagination,'main.post',id=posts[0].id) }}
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
 {% endblock %}

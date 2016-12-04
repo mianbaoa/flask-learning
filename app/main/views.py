@@ -1,10 +1,10 @@
 #创建视图文件很麻烦，仔细看看。
-from flask import render_template,flash,redirect,url_for
+from flask import render_template,flash,redirect,url_for,make_response
 from datetime import datetime
 from . import main
-from ..models import User,Role,Post
+from ..models import User,Role,Post,Comment
 from flask import abort,request,current_app
-from .forms import AddprofileForm,EditProfileAdminForm,PostForm
+from .forms import AddprofileForm,EditProfileAdminForm,PostForm,CommentForm
 from flask_login import login_required,current_user
 from app import db
 from ..decorators import admin_required,permission_required
@@ -17,20 +17,44 @@ def index():
                   author=current_user._get_current_object())#这里的_get_current_object是得到当前登录用户的整条属性
         db.session.add(post)
         return redirect(url_for('main.index'))
+    show_followed=False
+    if current_user.is_authenticated:
+        show_followed=bool(request.cookies.get('show_followed',''))#第二个参数应该是默认值
+    if show_followed:
+        query = current_user.followed_posts
+    else:
+        query = Post.query
     page=request.args.get('page',1,type=int)
-    pagination=Post.query.order_by(Post.timestamp.desc()).paginate(
+    pagination=query.order_by(Post.timestamp.desc()).paginate(
         page,per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],error_out=False)
     #这里返回的是一个列表,order_by时返回列表，应该是找寻所有有日期的文章,第一个参数为页数，第二个参数为每页的记录，第三个参数设为False，
     # 页数超出范围时会返回一个空列表
     posts=pagination.items#(这里items不懂什么意思)，应该表示为显示的结果吧
     return render_template('index.html',
-                           current_time=datetime.utcnow(),form=form,posts=posts,pagination=pagination)
+                           current_time=datetime.utcnow(),show_followed=show_followed,form=form,posts=posts,pagination=pagination)
 
-@main.route('/post/<int:id>')
+@main.route('/post/<int:id>',methods=['GET','POST'])
 def post(id):
     post=Post.query.get_or_404(id)
-    posts=[post]
-    return render_template('post.html',posts=posts)
+    form=CommentForm()
+    if form.validate_on_submit():
+        comment=Comment(body=form.body.data,
+                        post=post
+                        ,author=current_user._get_current_object())
+        db.session.add(comment)
+        flash('你的评论被添加到该博文')
+        page = (post.comments.count() - 1) // \
+               current_app.config['FLASKY_COMMENTS_PER_PAGE'] + 1#这里是点完确定之后直接重定向到你的评论的那一页，这个是计算页数，
+        #用//直接取整数部分，例：我评论的是第十条，则在第二页，而不是在第三页，一定要减一 ！逻辑很好理解
+        return redirect(url_for('main.post',id=post.id,page=page))
+    page = request.args.get('page' , 1, type=int)
+    pagination=post.comments.order_by(Comment.timestamp.asc()).paginate(
+        page,per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
+        error_out=False
+    )
+
+    comments=pagination.items
+    return render_template('post.html',posts=[post],comments=comments,pagination=pagination,form=form)
 
 @main.route('/edit/<int:id>',methods=['GET','POST'])
 def edit(id):
@@ -156,6 +180,49 @@ def followed(username):
     return render_template('followed.html', follows=follows, pagination=pagination, user=user,
                            endpoint='main.followed',h2='关注了谁',titel='Followed of')
 
+@main.route('/all',methods=['GET','POST'])
+@login_required
+def show_all():
+    resp = make_response(redirect(url_for('main.index')))#创建响应对象
+    resp.set_cookie('show_followed','',max_age=30*24*60*60)#设置一个月的cookie值，设置到cookie字典中
+    return resp
+
+@main.route('/followed',methods=['GET','POST'])
+@login_required
+def show_followed():
+    resp = make_response(redirect(url_for('main.index')))
+    resp.set_cookie('show_followed','1',max_age=30*24*60*60)
+    return resp
+
+@main.route('/moderate')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate():
+    page = request.args.get('page',1,type=int)
+    pagination=Comment.query.order_by(Comment.timestamp.desc()).paginate(
+        page,
+        per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments=pagination.items
+    return render_template('moderate.html',comments=comments,pagination=pagination,page=page)
+
+@main.route('/moderate/enable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate_enable(id):
+    comment=Comment.query.get_or_404(id)
+    comment.disabled=False
+    db.session.add(comment)
+    return redirect(url_for('main.moderate',page=request.args.get('page',1,type=int)))
+
+@main.route('/moderate/disable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate_disable(id):
+    comment=Comment.query.get_or_404(id)
+    comment.disabled=True
+    db.session.add(comment)
+    return redirect(url_for('main.moderate',page=request.args.get('page',1,type=int)))
 
 
 

@@ -9,6 +9,8 @@ class Config:
     FLASKY_ADMIN=os.environ.get('FLASKY_ADMIN')
     FLASKY_POSTS_PER_PAGE=5
     FLASKY_FOLLOWERS_PER_PAGE=5
+    FLASKY_COMMENTS_PER_PAGE=5
+
 
     @staticmethod#主要起作用的还是修饰器里的函数，
     def init_app(app):#配置类可以定义init_app()类方法，其参数是程序实例。在这个方法中，可以执行对当前环境的初始化
@@ -17,10 +19,12 @@ class DevelopmentConfig(Config):
     DEBUG=True
     MAIL_SERVER='smtp.163.com'
     MAIL_PORT=25
-    MAIL_USERNAME=os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD')
+    MAIL_USERNAME=os.environ.get('MAIL_USERNAME') or '18435151481@163.com'
+    MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD') or 'zhang6291652'
     SQLALCHEMY_DATABASE_URI=\
     'sqlite:///'+os.path.join(basedir,'data-dev.sqlite')
+
+    """为了账号的安全性，一般账号密码是不会写在代码中，在这里是为了学习需要，交流需要。"""
 
 
 class TestingConfig(Config):
