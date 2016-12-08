@@ -34,4 +34,7 @@ def create_app(config_name):#程序工厂函数，连接蓝本，创建实例，
     app.register_blueprint(auth_blueprint,url_prefix='/auth')#注册蓝本使用url_prefix参数后，
     # 蓝本中所有路由都会加上指定的前缀'/auth'
 
+    from .api_1_0 import api as api_1_0_blueprint
+    app.register_blueprint(api_1_0_blueprint,url_prefix='/api/v1.0')
+
     return app

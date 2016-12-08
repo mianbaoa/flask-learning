@@ -316,6 +316,19 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
     def verify_password(self,password):
         return check_password_hash(self.password_hash,password)
 
+    def generate_auth_token(self,expiration):
+        s = Serializer(current_app.config['SECRET_KEY'],expires_in=expiration)
+        return s.dumps({'id':self.id})
+
+    @staticmethod
+    def verify_auth_token(token):#这个函数返回该id用户本身或者None
+        s=Serializer(current_app.config['SECREY_KEY'])
+        try:
+            data =s.loads(token)
+        except:
+            return None
+        return User.query.get(data['id'])
+
 
     def __repr__(self):
         return '<User %r>'%self.username
