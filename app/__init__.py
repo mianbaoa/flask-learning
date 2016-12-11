@@ -20,6 +20,7 @@ login_manager.login_view='auth.login'#设置登录页面的端点，这里应该
 def create_app(config_name):#程序工厂函数，连接蓝本，创建实例，给实例提供配置，对实例进行初始化
     app=Flask(__name__)
     app.config.from_object(config[config_name])#这里的from_object是Flask提供的，可以直接把配置文件导入程序
+    config[config_name].init_app(app)
     mail.init_app(app)
     db.init_app(app)
     pagedown.init_app(app)
@@ -34,7 +35,11 @@ def create_app(config_name):#程序工厂函数，连接蓝本，创建实例，
     app.register_blueprint(auth_blueprint,url_prefix='/auth')#注册蓝本使用url_prefix参数后，
     # 蓝本中所有路由都会加上指定的前缀'/auth'
 
-    from .api_1_0 import api as api_1_0_blueprint
+    from .api_1 import api as api_1_0_blueprint
     app.register_blueprint(api_1_0_blueprint,url_prefix='/api/v1.0')
+
+    from .moderate import moderate as moderate_blueprint
+    app.register_blueprint(moderate_blueprint,url_prefix='/moderate')
+
 
     return app

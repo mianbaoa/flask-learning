@@ -9,11 +9,22 @@ from flask_login import login_required,current_user
 from app import db
 from ..decorators import admin_required,permission_required
 from ..models import Permission
+from flask_sqlalchemy import get_debug_queries
+
+@main.after_app_request
+def after_request(response):
+    for query in get_debug_queries():
+        if query.duration>=current_app.config['FLASKY_SLOW_DB_QUERY_TIME']:
+            current_app.logger.warning(
+                'slow query: %s\nParemeters: %s\nDuration: %f\nContext: %s\n' %
+                (query.statement,query.parameters,query.duration,query.context))
+    return response
+
 @main.route('/',methods=['GET','POST'])
 def index():
     form=PostForm()
     if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit():
-        post=Post(body=form.body.data,
+        post=Post(tit=form.titel.data,body=form.body.data,
                   author=current_user._get_current_object())#这里的_get_current_object是得到当前登录用户的整条属性
         db.session.add(post)
         return redirect(url_for('main.index'))
@@ -36,6 +47,7 @@ def index():
 @main.route('/post/<int:id>',methods=['GET','POST'])
 def post(id):
     post=Post.query.get_or_404(id)
+    Post.add_view(post,db)
     form=CommentForm()
     if form.validate_on_submit():
         comment=Comment(body=form.body.data,
@@ -68,6 +80,7 @@ def edit(id):
         flash('博文修改成功!!')
         return redirect(url_for('main.post',id=post.id))
     form.body.data=post.body
+    form.titel.data=post.body
     return render_template('edit_post.html',form=form)
 
 @main.route('/user/<username>')#这个视图函数不需要登录就可以访问，当登录用户为管理员时，想修改哪个用户就修改路由url后面的用户名字就行了
@@ -194,42 +207,23 @@ def show_followed():
     resp.set_cookie('show_followed','1',max_age=30*24*60*60)
     return resp
 
-@main.route('/moderate')
-@login_required
-@permission_required(Permission.MODERATE_COMMENTS)
-def moderate():
-    page = request.args.get('page',1,type=int)
-    pagination=Comment.query.order_by(Comment.timestamp.desc()).paginate(
-        page,
-        per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
-        error_out=False)
-    comments=pagination.items
-    return render_template('moderate.html',comments=comments,pagination=pagination,page=page)
 
-@main.route('/moderate/enable/<int:id>')
-@login_required
-@permission_required(Permission.MODERATE_COMMENTS)
-def moderate_enable(id):
-    comment=Comment.query.get_or_404(id)
-    comment.disabled=False
-    db.session.add(comment)
-    return redirect(url_for('main.moderate',page=request.args.get('page',1,type=int)))
-
-@main.route('/moderate/disable/<int:id>')
-@login_required
-@permission_required(Permission.MODERATE_COMMENTS)
-def moderate_disable(id):
-    comment=Comment.query.get_or_404(id)
-    comment.disabled=True
-    db.session.add(comment)
-    return redirect(url_for('main.moderate',page=request.args.get('page',1,type=int)))
+@main.route('/shutdown')#关闭测试服务器的路由，只能在测试环境中使用
+def server_shutdown():
+    if not current_app.testing:
+        abort(404)
+    shutdown=request.environ.get('werkzeug.server.shutdown')
+    if not shutdown:
+        abort(500)
+    shutdown()
+    return 'Shutting down'
 
 
 
 
 
 """
-@main.route('/admin')
+@main.route('/moderate')
 @login_required
 @admin_required
 def for_admins_only():

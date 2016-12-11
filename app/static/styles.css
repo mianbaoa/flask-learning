@@ -41,6 +41,9 @@ div.post-content {
 div.post-footer {
     text-align: right;
 }
+div.post-left {
+    text-align: left;
+}
 div.pagination {
     width: 100%;
     text-align: right;

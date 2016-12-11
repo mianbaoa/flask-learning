@@ -2,11 +2,12 @@ from . import db,login_manager
 from flask_login import UserMixin,AnonymousUserMixin#程序不用先检查用户是否登录，就能调用current_user.can()
 from werkzeug.security import generate_password_hash,check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer#生成确认令牌
-from flask import current_app,request#程序上下文
+from flask import current_app,request,url_for#程序上下文
 from markdown import markdown
 import bleach
 from datetime import datetime
 import hashlib  #md5散列值
+from app.exceptions import ValidationError
 
 
 class Permission:#定义权限常量
@@ -74,9 +75,31 @@ class Post(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     body=db.Column(db.Text)
     body_html=db.Column(db.Text)
+    tit = db.Column(db.String(64))#这里好像不能使用unique参数 不知道为什么
+    num_of_view=db.Column(db.Integer,default=0)
+    disable=db.Column(db.Boolean,default=False)
     timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
     author_id=db.Column(db.Integer,db.ForeignKey('users.id'))
     comments=db.relationship('Comment',backref='post',lazy='dynamic')
+
+    def to_json(self):
+        json_post = {
+            'url': url_for('api.get_post',id=self.id,_external=True),
+            'body': self.body,
+            'body_html':self.body_html,
+            'timestamp':self.timestamp,
+            'author':url_for('api.get_users',id=self.author_id,_external=True),
+            'comments':url_for('api.get_post_comments',id=self.id,_external=True),
+            'comment_count':self.comments.count()
+
+        }
+        return json_post
+
+    @staticmethod
+    def add_view(post,db):
+        post.num_of_view=post.num_of_view+1
+        db.session.add(post)
+        db.session.commit()
 
     @staticmethod#这个修饰器非常有用，可以在命令行单独启用他，让他生成数据库的很多虚拟用户
     def generate_fake(count=100):#创建虚拟的博文。。
@@ -87,11 +110,19 @@ class Post(db.Model):
         user_count=User.query.count()#查找有多少数量用户,p54
         for i in range(count):
             u=User.query.offset(randint(0,user_count-1)).first()#P53,偏移原查询返回的结果，查询一个新的，意思就是每个用户都能赋值给u
-            p=Post(body=forgery_py.lorem_ipsum.sentences(randint(1,3)),#每个用户写一到二个文章
+            p=Post(tit=forgery_py.lorem_ipsum.title(randint(3, 5)),
+                   body=forgery_py.lorem_ipsum.sentences(randint(15, 35)),#每个用户写一到二个文章
                    timestamp=forgery_py.date.date(True),
-                   author=u)
+                   num_of_view=randint(100, 15000),author=u)
             db.session.add(p)
             db.session.commit()
+
+    @staticmethod
+    def from_json(json_post):
+        body = json_post.get('body')
+        if body is None or body == '':
+            raise ValidationError('没有内容的博文！')
+        return Post(body=body)
 
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -127,6 +158,45 @@ class Comment(db.Model):
         target.body_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'), tags=allowed_tags,
                                                        strip=True))
 
+    def to_json(self):
+        json_comment={
+            'url':url_for('api.get_comments',id=self.id,_external=True),
+            'body':self.body,
+            'body_html':self.body_html,
+            'timestamp':self.timestamp,
+            'author':url_for('api.get_users',id=self.author_id,_external=True),
+            'post':url_for('api.get_posts',id=self.post_id,_external=True)
+        }
+
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('没有内容的评论！')
+        return Comment(body=body)
+
+    @staticmethod
+    def generate_fake(count=100):
+        from random import seed, randint
+        import forgery_py
+
+        seed()
+        Post_count = Post.query.count()
+        User_count = User.query.count()
+        for i in range(count):
+            a = Post.query.offset(randint(0, Post_count - 1)).first()
+            b = User.query.offset(randint(0, User_count - 1)).first()
+            c = Comment(body=forgery_py.lorem_ipsum.sentences(randint(3, 5)),
+                        timestamp=forgery_py.date.date(True),
+                        author=b,
+                        post=a)
+            db.session.add(c)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
 
 db.event.listen(Comment.body, 'set', Comment.on_changed_body)
 
@@ -134,7 +204,7 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
     __tablename__='users'
     id=db.Column(db.Integer,primary_key=True)#Integer默认32位
     email=db.Column(db.String(64),unique=True,index=True)
-    username=db.Column(db.String(64),unique=True,index=True)
+    username=db.Column(db.String(64),index=True)
     password_hash = db.Column(db.String(128))
     role_id=db.Column(db.Integer,db.ForeignKey('roles.id'))
     confirmed=db.Column(db.Boolean,default=False)#默认设置为False当这个值为True时，验证通过
@@ -155,6 +225,20 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
     last_seen=db.Column(db.DateTime(),default=datetime.utcnow)
 
     comments=db.relationship('Comment',backref='author',lazy='dynamic')#lazy参数设置为dynamic，返回的查询对象
+
+    def to_json(self):
+        json_user={
+            'url':url_for('api.get_user',id=self.id,_external=True),
+            'username':self.username,
+            'member_since':self.member_since,
+            'last_since':self.last_seen,
+            'posts':url_for('api.get_user_posts',id=self.id,_external=True),
+            'comments':url_for('api.get_user_comments',id=self.id,_external=True),
+            'followed_posts':url_for('api.get_user_followed_posts',id=self.id,_external=True),
+            'post_count':self.posts.count()
+        }
+        return json_user
+
 
 #<<<-----创建四个关于关注者与被关注者的方法跟一个索引属性：self所关注人的博文----->>>
     def follow(self,user):
@@ -318,11 +402,11 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
 
     def generate_auth_token(self,expiration):
         s = Serializer(current_app.config['SECRET_KEY'],expires_in=expiration)
-        return s.dumps({'id':self.id})
+        return s.dumps({'id':self.id}).decode('ascii')#这里要加上ascii
 
     @staticmethod
     def verify_auth_token(token):#这个函数返回该id用户本身或者None
-        s=Serializer(current_app.config['SECREY_KEY'])
+        s=Serializer(current_app.config['SECRET_KEY'])
         try:
             data =s.loads(token)
         except:

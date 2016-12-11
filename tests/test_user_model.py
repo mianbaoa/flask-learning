@@ -1,4 +1,4 @@
-import unittest
+"""import unittest
 from app.models import User,Role,Permission,AnonymousUser,Follow
 from app import db,create_app
 import time
@@ -178,7 +178,7 @@ class UserModelTestCase(unittest.TestCase):
         db.session.commit()
         db.session.delete(u2)#测试删除一个用户，他的关注者和他的被关注者这层关系都会被删除
         db.session.commit()
-        self.assertTrue(Follow.query.count() == 1)
+        self.assertTrue(Follow.query.count() == 1)"""
 
 
 

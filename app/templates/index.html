@@ -15,6 +15,7 @@
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p><!--指定refresh参数后会随时间的推移而更新,这里的格式是an hour ago-->
 <div>
 {% if current_user.can(Permission.WRITE_ARTICLES) %}
+ <h3>发表一篇博文</h3>
 {{ wtf.quick_form(form) }}
 {% endif %}
 </div>

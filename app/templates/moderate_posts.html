@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% import "_fenye.html" as fenye %}
+{% block titel %}Flasky - moderate posts{% endblock %}
+{% block page_content %}
+<div class="page-header">
+    <h2>管理博文</h2>
+</div>
+{% set moderate = True %}
+{% include "_posts.html" %}
+{% if pagination %}
+    <div class="pagination">
+    {{ fenye.pagination_widget(pagination,'moderate.admin_posts') }}
+    </div>
+{% endif %}
+{% endblock %}

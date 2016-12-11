@@ -3,13 +3,15 @@ import os
 basedir=os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY=os.environ.get('SECRET_KEY') or 'hard to gruss string'
-    SQLALCHEMY_COMMIT_ON_TEARDOWN=True
+    SQLALCHEMY_COMMIT_ON_TEARDOWN=True#每次请求结束后都会自动提交数据库的变动
     FLASKY_MAIL_SUBJECT_PREFIX='[Flasky]'
     FLASKY_MAIL_SENDER='18435151481@163.com'
     FLASKY_ADMIN=os.environ.get('FLASKY_ADMIN')
     FLASKY_POSTS_PER_PAGE=5
     FLASKY_FOLLOWERS_PER_PAGE=5
     FLASKY_COMMENTS_PER_PAGE=5
+    FLASKY_SLOW_DB_QUERY_TIME=0.5
+    SQLALCHEMY_RECORD_QUERIES=True#告诉SQLALchemy启用记录查询统计数字的功能
 
 
     @staticmethod#主要起作用的还是修饰器里的函数，
@@ -31,6 +33,7 @@ class TestingConfig(Config):
     TESTING=True
     SQLALCHEMY_DATABASE_URI=\
     'sqlite:///'+os.path.join(basedir,'data_test.sqlite')
+    WTF_CSRF_ENABLED=False
 
 
 class ProductionConfig(Config):
