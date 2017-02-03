@@ -1,9 +1,10 @@
 from . import moderate
 from flask_login import login_required
 from app.decorators import permission_required
-from app.models import Permission,Comment,Post
+from app.models import Permission,Comment,Post,PostType
 from flask import request,render_template,current_app,redirect,url_for,flash
 from app import db
+from .forms import AddPostType
 
 @moderate.route('/comments')
 @login_required
@@ -83,3 +84,15 @@ def delete_post(id):
     post=Post.query.get_or_404(id)
     db.session.delete(post)
     return redirect(url_for('moderate.admin_posts'))
+
+@moderate.route('/add/posttype',methods=['GET','POST'])
+@login_required
+@permission_required(Permission.ADMINISTER)
+def admin_posttype():
+    form=AddPostType()
+    if form.validate_on_submit():
+        posttype=PostType(name=form.name.data)
+        db.session.add(posttype)
+        flash('添加分类成功')
+        return redirect(url_for('main.index'))
+    return render_template('forms.html',titel=u'添加新的博文分类',form=form)

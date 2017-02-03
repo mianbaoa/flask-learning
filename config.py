@@ -25,6 +25,7 @@ class DevelopmentConfig(Config):
     MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD') or 'zhang6291652'
     SQLALCHEMY_DATABASE_URI=\
     'sqlite:///'+os.path.join(basedir,'data-dev.sqlite')
+    WHOOSH_BASE = os.path.join(basedir,'data-dev.sqlite')
 
     """为了账号的安全性，一般账号密码是不会写在代码中，在这里是为了学习需要，交流需要。"""
 

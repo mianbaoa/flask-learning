@@ -11,7 +11,7 @@ bootstrap=Bootstrap()
 mail=Mail()#这里是在其他函数文件里面要用到这些模块
 db=SQLAlchemy()
 moment=Moment()
-pagedown=PageDown()
+pagedown=PageDown()#富文本编辑器
 login_manager=LoginManager()
 login_manager.session_protection='strong'#加强会话保护，设为strong时，flask-login记下ip和浏览器代理信息，
 # 如果发生异动就登出用户

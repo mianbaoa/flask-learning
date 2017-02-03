@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "_fenye.html" as fenye %}
+{% block titel %}Flasky{% endblock %}
+{% block page_content %}
+{% include '_posts.html' %}
+{% if pagination %}
+    <div class="pagination">
+    {{ fenye.pagination_widget(pagination, 'main.post_type',id=id) }}
+    </div>
+    {% endif %}
+{% endblock %}

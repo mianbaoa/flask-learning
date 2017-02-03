@@ -69,6 +69,50 @@ class AnonymousUser(AnonymousUserMixin):
 
 login_manager.anonymous_user=AnonymousUser
 
+#文章来源
+class Source(db.Model):
+    __tablename__='sources'
+    id=db.Column(db.Integer,primary_key=True)
+    name=db.Column(db.String(64),unique=True)
+    posts=db.relationship('Post',backref='source',lazy='dynamic')
+
+    @staticmethod
+    def insert_source():
+        sources=(u'原创',u'转载',u'翻译')
+        for s in sources:
+            source=Source.query.filter_by(name=s).first()
+            if source is None:
+                source=Source(name=s)
+                db.session.add(source)
+        db.session.commit()
+#文章类型
+class PostType(db.Model):
+    __tablename__='posttypes'
+    id=db.Column(db.Integer,primary_key=True)
+    name=db.Column(db.String(64),unique=True)
+    posts=db.relationship('Post',backref='type',lazy='dynamic')
+
+    @staticmethod
+    def insert_type():
+        types=(u'工作感情',u'学习交流',u'动漫文化',u'漫画小说',u'游戏')
+        for i in types:
+            type=PostType.query.filter_by(name=i).first()
+            if type is None:
+                type=PostType(name=i)
+                db.session.add(type)
+        db.session.commit()
+
+    def __repr__(self):
+        return '<PostType %r>'%self.name
+
+#收藏博文的关系表
+class Collect(db.Model):
+    __tablename__='collects'
+    id=db.Column(db.Integer,primary_key=True)
+    post_id=db.Column(db.Integer,db.ForeignKey('posts.id'))
+    user_id=db.Column(db.Integer,db.ForeignKey('users.id'))
+    timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
+
 
 class Post(db.Model):
     __tablename__='posts'
@@ -81,6 +125,8 @@ class Post(db.Model):
     timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
     author_id=db.Column(db.Integer,db.ForeignKey('users.id'))
     comments=db.relationship('Comment',backref='post',lazy='dynamic')
+    source_id=db.Column(db.Integer,db.ForeignKey('sources.id'))
+    type_id=db.Column(db.Integer,db.ForeignKey('posttypes.id'))
 
     def to_json(self):
         json_post = {
@@ -108,12 +154,16 @@ class Post(db.Model):
 
         seed()
         user_count=User.query.count()#查找有多少数量用户,p54
+        source_count = Source.query.count()
+        type_count=PostType.query.count()
         for i in range(count):
             u=User.query.offset(randint(0,user_count-1)).first()#P53,偏移原查询返回的结果，查询一个新的，意思就是每个用户都能赋值给u
+            s=Source.query.offset(randint(0,source_count-1)).first()
+            t=PostType.query.offset(randint(0,type_count-1)).first()
             p=Post(tit=forgery_py.lorem_ipsum.title(randint(3, 5)),
                    body=forgery_py.lorem_ipsum.sentences(randint(15, 35)),#每个用户写一到二个文章
                    timestamp=forgery_py.date.date(True),
-                   num_of_view=randint(100, 15000),author=u)
+                   num_of_view=randint(100, 15000),author=u,source=s,type=t)
             db.session.add(p)
             db.session.commit()
 
@@ -141,6 +191,13 @@ class Follow(db.Model):
     follower_id=db.Column(db.Integer,db.ForeignKey('users.id'),primary_key=True)
     timestamp=db.Column(db.DateTime,default=datetime.utcnow)
 
+class Reply(db.Model):
+    __tablename__ = 'replys'
+    replied_id = db.Column(db.Integer, db.ForeignKey('comments.id'),
+                               primary_key=True)
+    replyer_id = db.Column(db.Integer, db.ForeignKey('comments.id'),
+                             primary_key=True)
+
 class Comment(db.Model):
     __tablename__='comments'
     id=db.Column(db.Integer,primary_key=True)
@@ -149,7 +206,32 @@ class Comment(db.Model):
     timestamp=db.Column(db.DateTime,index=True,default=datetime.utcnow)
     disabled=db.Column(db.Boolean)#默认为空，即为False,该评论没有被禁用
     author_id=db.Column(db.Integer,db.ForeignKey('users.id'))
+    reply_to=db.Column(db.String(128), default='notReply')#这里的字段名字应该是commenttype
     post_id=db.Column(db.Integer,db.ForeignKey('posts.id'))
+    replied=db.relationship('Reply',foreign_keys=[Reply.replyer_id],#为了消除外键间的歧义，必须指定外键
+                              backref=db.backref('replyer',lazy='joined'),
+                              lazy='dynamic',cascade='all,delete-orphan')
+    replyers=db.relationship('Reply', foreign_keys=[Reply.replied_id],  # 为了消除外键间的歧义，必须指定外键
+                    backref=db.backref('replied', lazy='joined'),
+                    lazy='dynamic', cascade='all,delete-orphan')
+    confirm=db.Column(db.Boolean,default=False)
+
+
+
+
+    def reply(self,comment):
+        r = Reply(replyer=self,replied=comment)
+        db.session.add(r)
+
+    @staticmethod
+    def add_reply_to():
+        comments=Comment.query.all()
+        for comment in comments:
+            comment.reply_to='notReply'
+            db.session.add(comment)
+            db.session.commit()
+
+
 
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -198,6 +280,29 @@ class Comment(db.Model):
         except:
             db.session.rollback()
 
+    @staticmethod
+    def generate_fake_reply(count=100):
+        from random import seed, randint
+        import forgery_py
+
+        seed()
+        User_count = User.query.count()
+        Comment_count=Comment.query.count()
+        for i in range(count):
+            b = User.query.offset(randint(0, User_count - 1)).first()
+            replied = Comment.query.offset(randint(0, Comment_count - 1)).first()
+            c = Comment(body=forgery_py.lorem_ipsum.sentences(randint(3, 5)),
+                        timestamp=forgery_py.date.date(True),
+                        author=b,
+                        reply_to='Reply',
+                        post=replied.post)
+            c.reply(replied)
+            db.session.add(c)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+
 db.event.listen(Comment.body, 'set', Comment.on_changed_body)
 
 class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默认实现,为了使用Flask-Login，必须实现这四个方法
@@ -226,6 +331,10 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
 
     comments=db.relationship('Comment',backref='author',lazy='dynamic')#lazy参数设置为dynamic，返回的查询对象
 
+    collectposts=db.relationship('Post',secondary='collects',backref=db.backref('users',lazy='joined'),lazy='dynamic')
+
+
+
     def to_json(self):
         json_user={
             'url':url_for('api.get_user',id=self.id,_external=True),
@@ -238,6 +347,27 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
             'post_count':self.posts.count()
         }
         return json_user
+
+    #创建关于收藏的四个函数
+    def collect(self,post):
+        if not self.collecting(post):
+            collect=Collect(user_id=self.id,post_id=post.id)
+            db.session.add(collect)
+            db.session.commit()
+    def uncollect(self,post):
+        if self.collecting(post):
+            collect=Collect.query.filter_by(user_id=self.id,post_id=post.id).first()
+            if collect:
+                db.session.delete(collect)
+                db.session.commit()
+    def collecting(self,post):
+        if Collect.query.filter_by(user_id=self.id,post_id=post.id).first():
+            return True
+        else:
+            return False
+    def collecttimestemp(self,post):
+        collect=Collect.query.filter_by(user_id=self.id,post_id=post.id).first()
+        return collect.timestamp
 
 
 #<<<-----创建四个关于关注者与被关注者的方法跟一个索引属性：self所关注人的博文----->>>
@@ -262,6 +392,41 @@ class User(UserMixin,db.Model):#UserMixin类，其中包括P82四种方法的默
         return Post.query.join(Follow,Follow.followed_id==Post.author_id).filter(Follow.follower_id==self.id)
         #这里不难理解，先在Follow表中过滤出self用户(self.id)对应的关注了的人的id，返回到Post然后再根据这些id在Post找作者为被关注者的博文
 #<<<-----创建随机用户----->>>
+
+    @property
+    def comments_replied(self):
+        comments=Comment.query.filter(Comment.author_id==self.id).all()
+        comment_id_list=[comment.id for comment in comments]
+        return Comment.query.join(Reply,Reply.replyer_id==Comment.id).\
+            filter(Reply.replied_id.in_(comment_id_list))
+        #查询我的所有评论的所有回复，借鉴了狗书p140，多看看 用到了in_这一个filter查询条件语句，与==类似.
+
+    def unreadcomments(self):
+        comments=Comment.query.filter(Comment.author_id==self.id).all()
+        comment_id_list=[comment.id for comment in comments]
+        comments=Comment.query.join(Reply,Reply.replyer_id==Comment.id).\
+            filter(Reply.replied_id.in_(comment_id_list)).all()
+        totel=0
+        for comment in comments:
+            if not comment.confirm:
+                totel+=1
+        return totel
+    #博文回复
+    def unreadpostreply(self):
+        posts=self.posts.all()
+        post_id_list=[post.id for post in posts]
+        comments=Comment.query.filter(Comment.post_id.in_(post_id_list)).all()
+        totel=0
+        for comment in comments:
+            if not comment.confirm:
+                totel+=1
+        return totel
+
+    @property
+    def postreply(self):
+        posts = self.posts.all()
+        post_id_list = [post.id for post in posts]
+        return Comment.query.filter(Comment.post_id.in_(post_id_list))
 
 
     @staticmethod#添加一个在命令行执行的方法,这个方法可以使数据库的每个用户都关注自己,从而可以在首页关注者里看到自己的博文

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% import "_fenye.html" as fenye %}
+{% block titel %}Flasky -- my collection {% endblock %}
+{% block page_content %}
+<h1>亲爱的{{ user.username }}!,下面是你收藏的博文！</h1>
+{% set mycollection = True %}
+{% include '_posts.html' %}
+
+{% if pagination %}
+    <div class="pagination">
+    {{ fenye.pagination_widget(pagination, 'main.my_collectposts',username=user.username) }}
+    </div>
+    {% endif %}
+{% endblock %}

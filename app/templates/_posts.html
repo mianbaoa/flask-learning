@@ -1,7 +1,12 @@
 <ul class="posts">
     {% for post in posts %}
     <li class="post">
-        <h3>
+        {% if mycollection %}
+        <h4>
+            {{ user.username }}收藏于{{ user.collecttimestemp(post) }}:
+        </h4>
+        {% endif %}
+        <h3 align="center">
         <a href="{{ url_for('main.post', id=post.id) }}">{{ post.tit }}</a>
         </h3>
         <div class="post-thumbnail">
@@ -19,6 +24,8 @@
             <div class="post-authou">
             <a href="{{ url_for('main.user',username=post.author.username) }}">{{ post.author.username }}</a>
             <span class="label label-default">{{ moment(post.timestamp).fromNow() }}</span>
+            <span class="label label-info">{{ post.source.name }}</span>
+            <span class="label label-warning">{{ post.type.name }}</span>
             </div>
             <div class="post-body">
                 {% if post.disable %}
@@ -36,7 +43,18 @@
                 <a href="{{ url_for('main.post',id=post.id) }}">
                     <span class="label label-default">点击进入</span>
                 </a>
+                {% if current_user.is_authenticated %}
+                {% if not current_user.collecting(post) %}
+                <a href="{{ url_for('main.collectpost',id=post.id) }}">
+                    <span class="label label-warning">收藏博文</span>
+                </a>
+                {% else %}
+                <a href="{{ url_for('main.uncollectpost',id=post.id) }}">
+                    <span class="label label-default">取消收藏</span>
+                </a>
 
+                {% endif %}
+                {% endif %}
                 {% if current_user==post.author %}
                 <a href="{{ url_for('main.edit',id=post.id) }}">
                     <span class="label label-primary">编辑博文</span>

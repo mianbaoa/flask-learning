@@ -48,12 +48,17 @@ def confirm(token):
 @auth.before_app_request#回调修饰器，可以在必要时拦截请求，拦截了登录请求，重定向到未认证的页面
 # 这个修饰器是用来过滤未认证的用户的，当请求不是auth蓝本里的请求，而且用户登录了但是未认证
 def before_request():
+    if current_user.is_authenticated \
+        and not current_user.confirmed \
+        and request.endpoint[:5] != 'auth.'\
+        and request.endpoint != 'static':#访问点endpoint应该就是跟url_for里的参数值一样吧
+        return redirect(url_for('auth.unconfirmed'))
+
+
+@auth.before_request#上面的before_app_request时全局请求钩子，这里是登录认证蓝本里的请求钩子
+def updata_last_seen():
     if current_user.is_authenticated:
         current_user.ping()
-        if not current_user.confirmed \
-            and request.endpoint[:5] != 'auth.'\
-            and request.endpoint != 'static':
-            return redirect(url_for('auth.unconfirmed'))
 
 
 @auth.route('/newpassword',methods=['GET','POST'])

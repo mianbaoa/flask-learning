@@ -2,6 +2,9 @@
     {% if comments %}
     {% for comment in comments %}
     <li class="post">
+        {% if comment.reply_to == 'Reply' %}
+        回复给<i>{{ comment.replied.first().replied.author.username }}:</i>
+        {% endif %}
         <div class="post-thumbnail">
             <a href="{{ url_for('main.user',username=comment.author.username) }}">
                 <img class="img-rounded profile-thubnail" src="{{ comment.author.gravatar(size=40) }}">
@@ -24,6 +27,7 @@
                     {% endif %}
                 {% endif %}
             </div>
+            <div class="post-left">
             {% if moderate %}
                 <br>
                 {% if comment.disabled %}
@@ -32,12 +36,15 @@
                 {% else %}
                     <a class="btn btn-warning btn-sm" href="{{ url_for('moderate.comments_disable',id=comment.id,page=page) }}">禁用</a>
                 {% endif %}
-            {% endif %}
+                {% endif %}
+            {% if moderate or comment.author==current_user%}
             <a class="btn btn-sm btn-danger" href="{{ url_for('moderate.delete_comment',id=comment.id,page=page)}}">删除</a>
+            {% endif %}
+            </div>
             {% if comment.disabled == False or current_user.is_authenticated %}
-                <div class="col-sm-1 {% if current_user.is_anonymous %}col-sm-offset-10{% endif %}">
-                    <a class="btn btn-sm btn-info" >
-                        <span class="post-foot">回复</span>
+                <div class="post-footer">
+                    <a class="btn btn-sm btn-info" href="{{ url_for('main.reply_comments',id=comment.id) }}">
+                        回复
                     </a>
                 </div>
                 {% endif %}

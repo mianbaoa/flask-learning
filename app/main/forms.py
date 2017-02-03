@@ -4,7 +4,7 @@ from wtforms import StringField, SubmitField,TextAreaField,BooleanField,SelectFi
 from flask_pagedown.fields import PageDownField
 from wtforms.validators import Required,Length,Email,Regexp
 from wtforms import ValidationError
-from ..models import Role,User
+from ..models import Role,User,Source,PostType
 
 
 class NameForm(Form):
@@ -30,7 +30,7 @@ class EditProfileAdminForm(Form):
     submit=SubmitField('确认修改当前用户的信息')
 
     def __init__(self,user,*args,**kwargs):#这个地方不是很懂,给类定义user参数，在视图函数中会用到form=EditProfileAdminForm(user=user)
-        super(EditProfileAdminForm,self).__init__(*args,**kwargs)
+        super(EditProfileAdminForm,self).__init__(*args,**kwargs)#在子类中调用父类Form的初始化方法，
         self.role.choices=[(role.id,role.name)
                            for role in Role.query.order_by(Role.name).all()]#order_by是按查询条件对查询结果进行排列
         self.user=user
@@ -48,11 +48,23 @@ class EditProfileAdminForm(Form):
 
 
 class PostForm(Form):
+    source=SelectField('来源',coerce=int)
+    type=SelectField('博文类型',coerce=int)
     titel=StringField('标题',validators=[Required(),Length(1,64)])
     body=PageDownField('内容',validators=[Required()])
 
     submit=SubmitField('确定')
 
+    def __init__(self,*args,**kwargs):
+        super(PostForm,self).__init__(*args,**kwargs)#保留父类的功能，又调用了父类的__init__方法
+        self.source.choices=[(source.id,source.name)
+                           for source in Source.query.order_by(Source.name).all()]#order_by是按查询条件对查询结果进行排列
+        self.type.choices=[(type.id,type.name) for type in PostType.query.order_by(PostType.name).all()]
+
 class CommentForm(Form):
     body=PageDownField('添加评论',validators=[Required()])
     submit=SubmitField('确定')
+
+
+class SearchForm(Form):
+    search=StringField('搜索',validators=[Required()])

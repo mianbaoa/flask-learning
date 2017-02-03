@@ -1,0 +1,9 @@
+{% import "_fenye.html" as fenye %}
+{% block titel %}Flasky - my comments{% endblock %}
+{% block page_content %}
+{% include "_comments.html" %}
+{% if pagination %}
+<div class="pagination"></div>
+{{ fenye.pagination_widget(pagination,'main.my_comments',username=current_user.username) }}
+{% endif %}
+{% endblock %}

@@ -12,7 +12,8 @@
         {% if user.name or user.location %}
         <p>
             {% if user.name %}{{ user.name }}{% endif %}
-            {% if user.location %}<a href="http://maps.baidu.com/?q={{ user.location }}">
+            {% if user.location %}
+            From <a href="http://maps.baidu.com/?q={{ user.location }}">
                 {{ user.location }}
             </a>
             {% endif %}
@@ -52,6 +53,30 @@
             他关注的人:<span class="badge">{{ user.followed.count() - 1 }}</span> </a><!--删掉自己关注自己-->
         {% if current_user.is_authenticated and user!=current_user and user.is_following(current_user) %}
         | <span class="label label-default">他关注了你</span>
+        {% endif %}
+        {% if current_user.is_authenticated and user == current_user %}
+        <div>
+            我最后一次登录的时间是{{ user.last_seen }}!
+        </div>
+        <div>
+            <a href="{{ url_for('main.my_comments',username=current_user.username) }}">
+            我共有{{ current_user.comments.count() }}条评论</a>
+            <a href="{{ url_for('main.reply_me',username=current_user.username) }}">
+                {{ num }}条回复,有{{ current_user.unreadcomments() }}条来自用户的未读回复</a>
+            <a href="{{ url_for('main.my_post_reply',username=current_user.username) }}">
+                我的博文有{{ current_user.unreadpostreply() }}条未读回复
+            </a>
+
+
+
+            <!--comment.replied.count()我的评论的回复的个数，不过不知道怎么定义我的评论-->
+            <!--num=0
+            for comment in comments
+            i=comment.replied.count()
+            num=num+i-->
+
+
+        </div>
         {% endif %}
 
     </div>

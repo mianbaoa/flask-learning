@@ -8,7 +8,7 @@ if os.environ.get('FLASK_COVERAGE'):
     COV.start()
 
 from app import create_app,db
-from app.models import User,Role,Post,Comment
+from app.models import User,Role,Post,Comment,Source,PostType
 from flask_script import Manager,Shell
 from flask_migrate import Migrate,MigrateCommand
 
@@ -17,7 +17,7 @@ manager=Manager(app)
 migrate=Migrate(app,db)
 
 def make_context_shell():
-    return dict(User=User,Role=Role,Post=Post,db=db,app=app,Comment=Comment)
+    return dict(User=User,Role=Role,Post=Post,db=db,app=app,Comment=Comment,Source=Source,PostType=PostType)
 manager.add_command('shell',Shell(make_context=make_context_shell))
 manager.add_command('db',MigrateCommand)
 
@@ -61,9 +61,12 @@ def deploy():
     from app.models import Role,User,Comment
     upgrade()
     Role.insert_roles()
+    Source.insert_source()
+    PostType.insert_type()
     User.generate_fake(100)
-    Post.generate_fake(100)
-    Comment.generate_fake(100)
+    Post.generate_fake(500)
+    Comment.generate_fake(1000)#添加1000个回复博文的评论
+    Comment.generate_fake_reply(1000)#添加1000个回复别人的评论
     User.add_followed_self()
 
 if __name__ == '__main__':

@@ -18,6 +18,8 @@
 
 
 {% block navbar %}<!--下面是导航栏的设置，还有一些东西不懂-->
+
+
 <div class="navbar navbar-inverse" role="navigation">
     <div class="container">
         <div class="navbar-header">
@@ -28,19 +30,37 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="/">Flasky</a><!--这里的<a></a>就表示是一个链接-->
+            <!--这里的<a></a>就表示是一个链接-->
         </div>
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li><a class="navbar-brand" href="/">首页</a></li>
                 {% if current_user.is_authenticated %}
                 <li><a class="navbar-brand" href="{{ url_for('main.user',username=current_user.username) }}">个人资料</a> </li>
+                <li><a class="navbar-brand" href="{{ url_for('main.my_collectposts',username=current_user.username) }}">我的收藏</a> </li>
                 {% endif %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">博文类别
+                    <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                    {% for posttype in g.posttypes %}
+                        <li><a href="{{ url_for('main.post_type',id=posttype.id) }}">{{ posttype.name }}</a> </li>
+                    {% endfor %}
+                    </ul>
+                </li>
+                <form style="display: inline;" action="{{url_for('main.search')}}" method="post" name="search">
+                    {{g.search_form.hidden_tag()}}{{g.search_form.search(size=20)}}
+                    <input type="submit" value="按博文标题搜索">
+                </form>
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
                 {% if current_user.is_authenticated %}
                 <!--current_user由FLASK-LOGIN定义，且在视图函数与模板中自动可用,如果用户登录，返回Turn。-->
+                {% if current_user.can(Permission.ADMINISTER) %}
+                <li><a href="{{ url_for('moderate.admin_posttype') }}">增加博文类别</a></li>
+                {% endif %}
                 {% if current_user.can(Permission.MODERATE_COMMENTS) %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">管理员选项
@@ -69,6 +89,8 @@
         </div>
     </div>
 </div>
+</header>
+
 {% endblock %}
 
 
