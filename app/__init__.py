@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from flask import Flask,render_template
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -28,8 +29,8 @@ def create_app(config_name):#程序工厂函数，连接蓝本，创建实例，
     bootstrap.init_app(app)
     login_manager.init_app(app)
 
-    from .main import main as main_blueprint#蓝本在工厂函数create_app()中注册到程序上
-    app.register_blueprint(main_blueprint)#使用Flask提供的register_blueprint
+    from .main import main as main_blueprint #蓝本在工厂函数create_app()中注册到程序上
+    app.register_blueprint(main_blueprint) #使用Flask提供的register_blueprint
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint,url_prefix='/auth')#注册蓝本使用url_prefix参数后，

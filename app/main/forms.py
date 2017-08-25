@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 #这个文件可以直接从视图函数文件中导入程序form=NameForm()
 from flask_wtf import Form
 from wtforms import StringField, SubmitField,TextAreaField,BooleanField,SelectField

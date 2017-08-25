@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 #设置了三个不同的子类，URI变量被指定了不同的值，这样程序就可在不同的配置环境中运行
 import os
 basedir=os.path.abspath(os.path.dirname(__file__))

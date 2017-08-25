@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from flask_wtf import Form
 from ..models import User
 from wtforms import ValidationError

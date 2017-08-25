@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from . import moderate
 from flask_login import login_required
 from app.decorators import permission_required

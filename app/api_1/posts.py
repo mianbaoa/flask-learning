@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from . import api
 from app.auth import auth
 from app.models import Post

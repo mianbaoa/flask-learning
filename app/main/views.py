@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 #创建视图文件很麻烦，仔细看看。
 from flask import render_template,flash,redirect,url_for,make_response
 from datetime import datetime

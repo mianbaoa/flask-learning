@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from . import db,login_manager
 from flask_login import UserMixin,AnonymousUserMixin#程序不用先检查用户是否登录，就能调用current_user.can()
 from werkzeug.security import generate_password_hash,check_password_hash
