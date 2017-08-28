@@ -5,6 +5,10 @@ from wtforms import ValidationError
 from wtforms import StringField,SubmitField,PasswordField,BooleanField
 from wtforms.validators import Required,Email,Length,Regexp,EqualTo
 #regexp第一个参数使用正则表达式确保输入字段只包含字母，数字，下划线和点号
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 class LoginForm(Form):
